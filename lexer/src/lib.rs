@@ -192,26 +192,6 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
             s = &input[acc..input.len() - n];
         }
 
-        // let mut n = 0;
-        // let t = &s[..];
-        // loop {
-        //     if let Some(sigil) = Sigil::lookup(&s).map(Token::Sigil) {
-        //         pos += s.len();
-        //         self.pos = pos;
-        //         let tok = self.emit(sigil);
-        //         if n == 0 {
-        //             return tok;
-        //         }
-        //         self.buf.push_back(tok);
-        //     }
-        //     if n < t.len() {
-        //         s = &t[n..=n];
-        //         n += 1;
-        //         continue;
-        //     }
-        //     break;
-        // }
-
         if self.buf.is_empty() {
             self.emit(Token::Invalid(Invalid::UnknownToken))
         } else {
