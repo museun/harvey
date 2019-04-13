@@ -1,5 +1,4 @@
 use super::*;
-use lexer::Sigil;
 use std::fmt::Debug;
 
 pub trait Surrounder<'a>: Debug {

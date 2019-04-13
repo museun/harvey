@@ -1,5 +1,6 @@
 use crate::{Parser, Syntax};
 use diag::ErrorReported;
+use lexer::{Token, Lexer, Keyword, Sigil, Primitive,UnitToken};
 
 type Result<T> = std::result::Result<T, ErrorReported>;
 
@@ -15,10 +16,8 @@ macro_rules! use_this {
 use_this! {
     delimited;
     guard;
+    list;
     sink;
     surround;
     token;
-    tokens;
-    sigil;
-    list;
 }

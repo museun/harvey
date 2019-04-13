@@ -13,3 +13,18 @@ pub enum Primitive {
     F32,
     F64,
 }
+
+impl From<Primitive> for crate::Token {
+    fn from(prim: Primitive) -> Self {
+        crate::Token::Primitive(prim)
+    }
+}
+
+impl PartialEq<crate::Token> for Primitive {
+    fn eq(&self, other: &crate::Token) -> bool {
+        if let crate::Token::Primitive(kw) = other {
+            return self.eq(kw);
+        }
+        false
+    }
+}

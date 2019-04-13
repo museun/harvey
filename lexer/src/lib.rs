@@ -14,6 +14,34 @@ pub use self::primitive::Primitive;
 pub use self::sigil::Sigil;
 pub use self::token::{Invalid, Token};
 
+pub trait UnitToken {
+    fn unit() -> Token;
+}
+
+impl UnitToken for Token {
+    fn unit() -> Token {
+        Token::EOF
+    }
+}
+
+impl UnitToken for Sigil {
+    fn unit() -> Token {
+        Sigil::Unit.into()
+    }
+}
+
+impl UnitToken for Keyword {
+    fn unit() -> Token {
+        Keyword::Let.into()
+    }
+}
+
+impl UnitToken for Primitive {
+    fn unit() -> Token {
+        Primitive::U8.into()
+    }
+}
+
 pub struct Lexer<'a, F: SpanFile> {
     input: &'a str,
     iter: Peekable<Chars<'a>>,

@@ -60,37 +60,26 @@ mod tests {
     use super::*;
     #[test]
     fn delimited() {
-        let mut syntax = Delimited::new(
-            lexer::Token::Integer,
-            lexer::Token::Sigil(lexer::Sigil::Comma),
-        );
-
         let filename = diag::FileName::new("delimited");
 
         let input: diag::Text = "1,".into();
-        let tokens = lexer::Lexer::new(&input, filename)
-            .into_iter()
-            .collect::<Vec<_>>();
+        let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
+        let mut syntax = Delimited::new(Token::Integer, Sigil::Comma);
         let mut parser = crate::Parser::new(filename, &input, &tokens);
         assert_eq!(
             parser.parse_until_eof(&mut syntax).unwrap()[0].value,
-            lexer::Token::Integer
+            Token::Integer
         );
 
-        let mut syntax = Delimited::optional(
-            lexer::Token::Integer,
-            lexer::Token::Sigil(lexer::Sigil::Comma),
-        );
         let input: diag::Text = "1".into();
-        let tokens = lexer::Lexer::new(&input, filename)
-            .into_iter()
-            .collect::<Vec<_>>();
+        let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
+        let mut syntax = Delimited::optional(Token::Integer, Sigil::Comma);
         let mut parser = crate::Parser::new(filename, &input, &tokens);
         assert_eq!(
             parser.parse_until_eof(&mut syntax).unwrap()[0].value,
-            lexer::Token::Integer
+            Token::Integer
         );
     }
 }

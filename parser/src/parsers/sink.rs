@@ -32,20 +32,18 @@ where
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn sink() {
-        let input: diag::Text = "1234567890".into();
         let filename = diag::FileName::new("sink");
-        let tokens = lexer::Lexer::new(&input, filename)
-            .into_iter()
-            .collect::<Vec<_>>();
+
+        let input: diag::Text = "1234567890".into();
+        let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
         let mut parser = crate::Parser::new(filename, &input, &tokens);
-        assert_eq!(parser.expect(&mut Sink(lexer::Token::Integer)).unwrap(), 10);
-        assert!(parser.is(lexer::Token::EOF));
+        assert_eq!(parser.expect(&mut Sink(Token::Integer)).unwrap(), 10);
+        assert!(parser.is(Token::EOF));
     }
 }

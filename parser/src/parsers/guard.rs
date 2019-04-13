@@ -12,8 +12,10 @@ impl<'a, T, E> Guard<T, E> {
 
 impl<'a, T, E> Syntax<'a> for Guard<T, E>
 where
-    T: Syntax<'a, Output = E::Output>,
+    T: Syntax<'a>,
     E: Syntax<'a>,
+    T::Output: std::fmt::Debug,
+    E::Output: std::fmt::Debug,
 {
     type Output = E::Output;
 
@@ -32,28 +34,23 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn guard() {
-        let mut syntax = Guard::new(
-            lexer::Token::Sigil(lexer::Sigil::Arrow),
-            lexer::Token::Identifier,
-        );
-
-        let input: diag::Text = "foo -> bar".into();
         let filename = diag::FileName::new("guard");
 
-        let tokens = lexer::Lexer::new(&input, filename)
-            .into_iter()
-            .collect::<Vec<_>>();
+        let input: diag::Text = "foo -> bar".into();
+        let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
+        let mut syntax = Guard::new(Sigil::Arrow, Token::Identifier);
         let mut parser = crate::Parser::new(filename, &input, &tokens);
 
-        let tok = parser.expect(&mut lexer::Token::Identifier).unwrap();
-        assert_eq!(tok.value, lexer::Token::Identifier);
+        let tok = parser.expect(&mut Token::Identifier).unwrap();
+        assert_eq!(tok.value, Token::Identifier);
         assert_eq!(parser.string_at(tok.span).unwrap(), "foo");
 
         let tok = parser.expect(&mut syntax).unwrap();
-        assert_eq!(tok.value, lexer::Token::Identifier);
+        assert_eq!(tok.value, Token::Identifier);
         assert_eq!(parser.string_at(tok.span).unwrap(), "bar");
     }
 }
