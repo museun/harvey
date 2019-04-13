@@ -1,4 +1,4 @@
-use crate::{Level, Span, SpanFile, Spanned};
+use super::*;
 
 use colored::Colorize;
 
@@ -44,8 +44,8 @@ impl Reporter {
         link.push_str(&format!(
             " {}:{}:{}",
             spanned.span.file().name(),
-            spanned.location.line,
-            spanned.range().start
+            spanned.span.line(),
+            spanned.range().start + 1
         ));
 
         self.header.replace(header);

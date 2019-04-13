@@ -3,7 +3,7 @@ use fxhash::FxHasher;
 use indexmap::{IndexMap, IndexSet};
 use std::hash::BuildHasherDefault;
 
-use diag::{Diagnostic, ErrorReported, FileName, Location, Span, Spanned, Text};
+use diag::{Diagnostic, ErrorReported, FileName, Span, Spanned, Text};
 
 pub(crate) type FxIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<FxHasher>>;
 pub(crate) type FxIndexSet<K> = IndexSet<K, BuildHasherDefault<FxHasher>>;
@@ -79,16 +79,38 @@ impl<'a> Parser<'a> {
         last
     }
 
+    pub fn parse_until_eof<S>(
+        &mut self,
+        mut syntax: &mut S,
+    ) -> Result<Vec<S::Output>, ErrorReported>
+    where
+        S: Syntax<'a>,
+    {
+        use lexer::Token::*;
+        let mut out = vec![];
+        loop {
+            self.skip(NewLine);
+            if self.is(EOF) {
+                break;
+            }
+            if self.test(&mut syntax) {
+                match self.expect(&mut syntax) {
+                    Ok(ok) => out.push(ok),
+                    Err(ErrorReported(..)) => (),
+                }
+            } else {
+                let Spanned { span, .. } = self.shift();
+                return Err(self.report_error(span, "unexpected token"));
+            }
+        }
+        Ok(out)
+    }
+
     pub fn test<S>(&self, syntax: &mut S) -> bool
     where
         S: Syntax<'a>,
     {
-        log::trace!(
-            "test? {:?}: {:?} -> {:?}",
-            syntax,
-            self.tokens[self.next_lookahead],
-            self.peek_str()
-        );
+        log::trace!("test? {:?} -> {:?}", syntax, self.peek_str());
         syntax.test(self)
     }
 
@@ -96,23 +118,35 @@ impl<'a> Parser<'a> {
     where
         S: Syntax<'a>,
     {
-        log::trace!(
-            "expect! {:?}: {:?} -> {:?}",
-            syntax,
-            self.tokens[self.next_lookahead],
-            self.peek_str()
-        );
+        log::trace!("expect! {:?} -> {:?}", syntax, self.peek_str());
         syntax.expect(self)
     }
 
     pub fn report_error(&mut self, span: Span<FileName>, msg: impl ToString) -> ErrorReported {
+        use diag::SpanFile;
         let diag = diag::Diagnostic::new(span, msg);
         if cfg!(test) {
-            log::error!("{} got '{}'", diag.message, &self.input[diag.span]);
+            log::error!(
+                "{} got '{}' at {}:{}:{}",
+                diag.message,
+                &self.input[diag.span],
+                span.file().name(),
+                span.line(),
+                span.start()
+            );
         }
         let err = ErrorReported::at_diagnostic(&diag);
         self.errors.push(diag);
         err
+    }
+
+    fn skip(&mut self, token: lexer::Token) -> bool {
+        let mut count = 0;
+        while self.is(token) {
+            self.shift();
+            count += 1;
+        }
+        count > 0
     }
 
     fn eat(&mut self, filtered: &[lexer::Token]) -> Spanned<lexer::Token, FileName> {

@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::iter::Peekable;
 use std::str::Chars;
 
-use diag::{Location, Span, SpanFile, Spanned};
+use diag::{Span, SpanFile, Spanned};
 
 mod keyword;
 mod primitive;
@@ -232,15 +232,9 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
             self.line
         };
 
-        let span = Span::new(self.file, start, column);
-        let loc = Location {
-            line,
-            column,
-            index: self.index,
-        };
-
+        let span = Span::new(self.file, start, column, line);
         self.start = self.pos;
-        Spanned::new(kind, span, loc)
+        Spanned::new(kind, span)
     }
 
     fn peek(&mut self) -> Option<&char> {

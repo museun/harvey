@@ -276,7 +276,7 @@ fn demo() {
                 "where are all of the identifiers?",
                 tok,
             )
-            .line(tok.location.line, &lines[tok.location.line - 1])
+            .line(tok.span.line(), &lines[tok.span.line() - 1])
             .flag(tok.span, "here's one!")
             // .note("something should go here")
             .build();

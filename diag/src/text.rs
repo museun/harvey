@@ -156,4 +156,3 @@ impl Hash for Text {
         <str as Hash>::hash(self, state)
     }
 }
-

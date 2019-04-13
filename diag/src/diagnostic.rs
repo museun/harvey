@@ -1,4 +1,4 @@
-use crate::{FileName, Location, Span, SpanFile, Spanned};
+use super::*;
 
 // TODO make this work with Printer
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
@@ -30,7 +30,7 @@ pub struct Flag<F: SpanFile> {
 }
 
 impl<F: SpanFile> Flag<F> {
-    pub fn new(level: Level, span: Span<F>, location: Location, label: impl ToString) -> Self {
+    pub fn new(level: Level, span: Span<F>, label: impl ToString) -> Self {
         Self {
             level,
             label: Spanned::new(
@@ -38,7 +38,6 @@ impl<F: SpanFile> Flag<F> {
                     label: label.to_string(),
                 },
                 span,
-                location,
             ),
         }
     }

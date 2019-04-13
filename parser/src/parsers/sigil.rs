@@ -11,7 +11,11 @@ impl<'a> Syntax<'a> for Token {
     }
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        Ok(parser.shift())
+        if self.test(parser) {
+            Ok(parser.shift())
+        } else {
+            Err(parser.report_error(parser.peek().span, format!("expected '{}'", self)))
+        }
     }
 }
 
@@ -20,9 +24,8 @@ mod tests {
     use super::*;
     #[test]
     fn lex_token() {
-        let mut syn = Token::Identifier;
         let input = "this is a test";
-        let expected = input.split_whitespace().collect::<Vec<_>>();
+        let expected = input.split_whitespace();
 
         let input: diag::Text = input.into();
         let filename = FileName::new("lex_token");
@@ -30,64 +33,53 @@ mod tests {
             .into_iter()
             .collect::<Vec<_>>();
 
-        let mut parser = crate::Parser::new(filename, &input, &tokens);
-
-        let mut i = 0;
-        while let Ok(d) = parser.expect(&mut syn) {
-            if d.value == lexer::Token::EOF {
-                break;
-            }
-            assert_eq!(parser.string_at(d.span).unwrap(), expected[i]);
-            i += 1;
+        for (test, expected) in crate::Parser::new(filename, &input, &tokens)
+            .parse_until_eof(&mut Token::Identifier)
+            .unwrap()
+            .iter()
+            .zip(expected)
+        {
+            assert_eq!(parser.string_at(test.span).unwrap(), expected);
         }
     }
 
     #[test]
     fn lex_sigil() {
-        let _ = env_logger::builder()
-            .default_format_timestamp(false)
-            .try_init();
-
-        let mut syn = Token::Sigil(Sigil::Unit);
-
-        let input: diag::Text = "(); ()".into();
+        let input: diag::Text = "    () ()       ()\n   ()()()".into();
         let filename = FileName::new("lex_sigil");
         let tokens = lexer::Lexer::new(&input, filename)
             .into_iter()
             .collect::<Vec<_>>();
 
-        let mut parser = crate::Parser::new(filename, &input, &tokens);
-        while let Ok(d) = parser.expect(&mut syn) {
-            if d.value == lexer::Token::EOF {
-                break;
-            }
-            eprintln!("{:#?}", d)
-            // assert_eq!(Sigil::Unit, d.value);
-        }
+        assert!(crate::Parser::new(filename, &input, &tokens)
+            .parse_until_eof(&mut Token::Sigil(Sigil::Unit))
+            .unwrap()
+            .iter()
+            .all(|s| s.value == lexer::Token::Sigil(Sigil::Unit)));
     }
 
     #[test]
-    #[ignore]
     fn lex_keyword() {
-        let mut syn = Token::Identifier;
-        let input = "this is a test";
-        let expected = input.split_whitespace().collect::<Vec<_>>();
+        let params = &[
+            (Keyword::Let, "let"),
+            (Keyword::When, "when"),
+            (Keyword::Type, "type"),
+            (Keyword::Match, "match"),
+            (Keyword::Import, "import"),
+        ];
 
-        let input: diag::Text = input.into();
-        let filename = FileName::new("lex_keyword");
-        let tokens = lexer::Lexer::new(&input, filename)
-            .into_iter()
-            .collect::<Vec<_>>();
+        for (param, input) in params {
+            let input: diag::Text = input.clone().into();
+            let filename = FileName::new("lex_keyword");
+            let tokens = lexer::Lexer::new(&input, filename)
+                .into_iter()
+                .collect::<Vec<_>>();
 
-        let mut parser = crate::Parser::new(filename, &input, &tokens);
-
-        let mut i = 0;
-        while let Ok(d) = parser.expect(&mut syn) {
-            if d.value == lexer::Token::EOF {
-                break;
-            }
-            assert_eq!(parser.string_at(d.span).unwrap(), expected[i]);
-            i += 1;
+            let test = crate::Parser::new(filename, &input, &tokens)
+                .parse_until_eof(&mut Token::Keyword(*param))
+                .unwrap();
+            assert_eq!(test.len(), 1);
+            assert_eq!(test[0].value, Token::Keyword(*param));
         }
     }
 }

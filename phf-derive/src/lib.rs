@@ -67,12 +67,12 @@ pub fn phf_mapping(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[allow(dead_code)]
-        #[derive(Copy, Clone, PartialEq, Hash)]
+        #[derive(Debug, Copy, Clone, PartialEq, Hash)]
         pub enum #enum_name {
             #(#variants,)*
         }
 
-        impl std::fmt::Debug for #enum_name {
+        impl std::fmt::Display for #enum_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 use #enum_name::*;
                 let s = match self {
@@ -156,6 +156,14 @@ fn make_lookup(
                     #(#index => #variants,)*
                     _ => return None,
                 })
+            }
+        }
+
+        impl std::fmt::Display for #ident {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    #(variants => write!(f, "{}", #tokens),)*
+                }
             }
         }
     }
