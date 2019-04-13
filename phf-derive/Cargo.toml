@@ -1,0 +1,16 @@
+[package]
+name = "phf-derive"
+version = "0.1.0"
+authors = ["museun <museun@outlook.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+phf = { path = "../phf" }
+
+proc-macro2 = "0.4.27"
+quote = "0.6.12"
+syn = { version = "0.15.30" }
+heck = "0.3.1"

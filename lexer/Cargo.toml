@@ -1,0 +1,11 @@
+[package]
+name = "lexer"
+version = "0.1.0"
+authors = ["museun <museun@outlook.com>"]
+edition = "2018"
+
+[dependencies]
+diag = { path = "../diag" }
+phf = { path = "../phf" }
+phf-derive = { path = "../phf-derive" }
+log = "0.4.6"

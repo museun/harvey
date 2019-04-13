@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "phf",
+    "phf-derive",
+    "diag",
+    "lexer",
+    "parser",
+    "hir",
+    "infer",
+    "repl",
+]

@@ -1,0 +1,18 @@
+[package]
+name = "parser"
+version = "0.1.0"
+authors = ["museun <museun@outlook.com>"]
+edition = "2018"
+
+[dependencies]
+fxhash = "0.2.1"
+indexmap = "1.0.2"
+log = "0.4.6"
+
+lexer = { path = "../lexer" }
+diag = { path = "../diag" }
+hir = { path = "../hir" }
+rand = "0.6.5"
+
+[dev-dependencies]
+env_logger = "0.6.1"
