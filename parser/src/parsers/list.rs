@@ -62,5 +62,21 @@ mod tests {
 
         assert_eq!(res.len(), 9);
         assert!(res.iter().all(|k| k.value == lexer::Token::Integer));
+
+        let input: diag::Text = "1, 2, 3, 4,\n5,6,7,8,9,".into();
+        let filename = diag::FileName::new("delimited");
+        let tokens = lexer::Lexer::new(&input, filename)
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let list = crate::Parser::new(filename, &input, &tokens)
+            .parse_until_eof(&mut syntax)
+            .unwrap();
+        assert_eq!(list.len(), 2);
+
+        assert_eq!(list[0].len(), 4);
+        assert!(list[0].iter().all(|k| k.value == lexer::Token::Integer));
+        assert_eq!(list[1].len(), 5);
+        assert!(list[1].iter().all(|k| k.value == lexer::Token::Integer));
     }
 }
