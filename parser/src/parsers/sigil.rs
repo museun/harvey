@@ -33,7 +33,8 @@ mod tests {
             .into_iter()
             .collect::<Vec<_>>();
 
-        for (test, expected) in crate::Parser::new(filename, &input, &tokens)
+        let mut parser = crate::Parser::new(filename, &input, &tokens);
+        for (test, expected) in parser
             .parse_until_eof(&mut Token::Identifier)
             .unwrap()
             .iter()
