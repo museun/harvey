@@ -14,8 +14,6 @@ impl<'a, T, E> Syntax<'a> for Guard<T, E>
 where
     T: Syntax<'a>,
     E: Syntax<'a>,
-    T::Output: std::fmt::Debug,
-    E::Output: std::fmt::Debug,
 {
     type Output = E::Output;
 
@@ -29,7 +27,6 @@ where
         parser.expect(val)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
