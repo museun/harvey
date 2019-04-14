@@ -6,6 +6,8 @@ members = [
     "lexer",
     "parser",
     "hir",
-    "infer",
+    "infer",    
     "repl",
+    "fsm",
+    "fsm-derive",
 ]

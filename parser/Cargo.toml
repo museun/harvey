@@ -8,11 +8,13 @@ edition = "2018"
 fxhash = "0.2.1"
 indexmap = "1.0.2"
 log = "0.4.6"
+rand = "0.6.5"
 
 lexer = { path = "../lexer" }
 diag = { path = "../diag" }
 hir = { path = "../hir" }
-rand = "0.6.5"
+fsm = { path = "../fsm" }
+fsm-derive = { path = "../fsm-derive" }
 
 [dev-dependencies]
 env_logger = "0.6.1"

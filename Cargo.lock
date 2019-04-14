@@ -172,6 +172,20 @@ version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "fsm"
+version = "0.1.0"
+
+[[package]]
+name = "fsm-derive"
+version = "0.1.0"
+dependencies = [
+ "fsm 0.1.0",
+ "proc-macro2 0.4.27 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 0.6.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 0.15.30 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "fuchsia-cprng"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -308,6 +322,8 @@ version = "0.1.0"
 dependencies = [
  "diag 0.1.0",
  "env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fsm 0.1.0",
+ "fsm-derive 0.1.0",
  "fxhash 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hir 0.1.0",
  "indexmap 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",

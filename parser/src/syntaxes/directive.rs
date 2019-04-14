@@ -12,7 +12,7 @@ impl<'a> Syntax<'a> for Directive {
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
         parser.expect(&mut Sigil::Hash)?;
         parser
-            .expect(&mut parsers::Surround(
+            .expect(&mut Surround(
                 Sigil::OpenBracket,
                 Identifier,
                 Sigil::CloseBracket,

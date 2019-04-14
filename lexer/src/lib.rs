@@ -145,6 +145,7 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
         self.emit(Token::Comment)
     }
 
+
     // TODO handle nested strings
     fn string(&mut self) -> Spanned<Token, F> {
         self.start += 1;
@@ -167,7 +168,7 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
         let mut count = 1;
 
         while let Some(ch) = self.peek() {
-            if ch.is_ascii_whitespace() || ch.is_ascii_punctuation() {
+            if ch.is_ascii_whitespace() || ch.is_ascii_punctuation() || ch.is_ascii_digit() {
                 break;
             }
             self.advance();

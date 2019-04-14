@@ -20,4 +20,5 @@ use_this! {
     sink;
     surround;
     token;
+    or;
 }

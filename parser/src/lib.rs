@@ -19,7 +19,9 @@ pub struct Parser<'a> {
     tokens: &'a [Spanned<lexer::Token, FileName>],
     filename: FileName,
 
-    last_span: Span<FileName>,
+    last: Span<FileName>,
+
+    current: Span<FileName>,
     lookahead_token: Spanned<lexer::Token, FileName>,
     next_lookahead: usize,
 
@@ -49,7 +51,9 @@ impl<'a> Parser<'a> {
             tokens,
             filename,
             errors: vec![],
-            last_span: Span::initial(filename),
+
+            last: Span::initial(filename),
+            current: Span::initial(filename),
             lookahead_token: tok,
             next_lookahead: loc,
         }
@@ -60,7 +64,11 @@ impl<'a> Parser<'a> {
     }
 
     pub fn current_span(&self) -> Span<FileName> {
-        self.last_span
+        self.current
+    }
+
+    pub fn previous_span(&self) -> Span<FileName> {
+        self.last
     }
 
     pub fn peek(&self) -> Spanned<lexer::Token, FileName> {
@@ -71,16 +79,39 @@ impl<'a> Parser<'a> {
         &self.input[self.peek().span]
     }
 
+    pub fn current_str(&self) -> &'a str {
+        &self.input[self.current]
+    }
+
+    pub fn shift_str<S>(&mut self, syntax: &mut S) -> &'a str
+    where
+        S: Syntax<'a>,
+    {
+        self.expect(syntax).expect("no error from psuedo-shift");
+        self.current_str()
+    }
+
+    pub fn expect_str<S>(&mut self, syntax: &mut S) -> Result<&'a str, ErrorReported>
+    where
+        S: Syntax<'a>,
+    {
+        self.expect(syntax).map(|_| self.current_str())
+    }
+
     pub fn string_at(&self, span: Span<FileName>) -> Option<&'a str> {
         self.input.get(span)
     }
 
     pub fn shift(&mut self) -> Spanned<lexer::Token, FileName> {
-        self.last_span = self.lookahead_token.span;
+        self.last = std::mem::replace(&mut self.current, self.lookahead_token.span);
         let last = self.lookahead_token;
-        self.lookahead_token = self.eat(&[lexer::Token::Whitespace, lexer::Token::Comment]);
+        self.lookahead_token = self.eat(&[lexer::Token::Comment]); // lexer::Token::Whitespace,
         log::trace!("shift: {:?} <- {:?}", last, self.lookahead_token);
         last
+    }
+
+    pub fn discard_last_error(&mut self) -> Option<Diagnostic> {
+        self.errors.pop()
     }
 
     pub fn parse_until_eof<S>(
@@ -102,6 +133,7 @@ impl<'a> Parser<'a> {
                     Ok(ok) => out.push(ok),
                     Err(ErrorReported(..)) => (),
                 }
+                self.lookahead_token = self.eat(&[lexer::Token::Whitespace]);
             } else {
                 let Spanned { span, .. } = self.shift();
                 return Err(self.report_error(span, "unexpected token"));
@@ -130,11 +162,12 @@ impl<'a> Parser<'a> {
     pub fn report_error(&mut self, span: Span<FileName>, msg: impl ToString) -> ErrorReported {
         use diag::SpanFile;
         let diag = diag::Diagnostic::new(span, msg);
+
         if cfg!(test) {
             log::error!(
                 "{}, got '{}' at {}:{}:{}",
                 diag.message,
-                &self.input[diag.span],
+                &self.input[span],
                 span.file().name(),
                 span.line(),
                 span.start()

@@ -21,10 +21,7 @@ where
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
         let mut count = 0;
-        loop {
-            if !parser.test(&mut self.0) {
-                break;
-            }
+        while parser.test(&mut self.0) {
             parser.shift();
             count += 1;
         }
@@ -42,7 +39,7 @@ mod tests {
         let input: diag::Text = "1234567890".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let mut parser = crate::Parser::new(filename, &input, &tokens);
+        let mut parser = Parser::new(filename, &input, &tokens);
         assert_eq!(parser.expect(&mut Sink(Token::Integer)).unwrap(), 10);
         assert!(parser.is(Token::EOF));
     }

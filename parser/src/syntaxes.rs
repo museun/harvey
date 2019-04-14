@@ -1,4 +1,4 @@
-use crate::{Parser, Syntax,parsers};
+use crate::{Parser, Syntax, parsers::*};
 use diag::ErrorReported;
 use lexer::{Token, Lexer, Keyword, Sigil, Primitive,UnitToken};
 
@@ -19,4 +19,6 @@ use_this! {
     identifier;
     directive;
     variable;
+    consts;
+    literal;
 }
