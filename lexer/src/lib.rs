@@ -5,42 +5,14 @@ use std::str::Chars;
 use diag::{Span, SpanFile, Spanned};
 
 mod keyword;
-mod primitive;
 mod sigil;
 mod token;
+mod unit;
 
 pub use self::keyword::Keyword;
-pub use self::primitive::Primitive;
 pub use self::sigil::Sigil;
 pub use self::token::{Invalid, Token};
-
-pub trait UnitToken {
-    fn unit() -> Token;
-}
-
-impl UnitToken for Token {
-    fn unit() -> Token {
-        Token::EOF
-    }
-}
-
-impl UnitToken for Sigil {
-    fn unit() -> Token {
-        Sigil::Unit.into()
-    }
-}
-
-impl UnitToken for Keyword {
-    fn unit() -> Token {
-        Keyword::Let.into()
-    }
-}
-
-impl UnitToken for Primitive {
-    fn unit() -> Token {
-        Primitive::U8.into()
-    }
-}
+pub use self::unit::UnitToken;
 
 pub struct Lexer<'a, F: SpanFile> {
     input: &'a str,
@@ -145,7 +117,6 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
         self.emit(Token::Comment)
     }
 
-
     // TODO handle nested strings
     fn string(&mut self) -> Spanned<Token, F> {
         self.start += 1;
@@ -178,7 +149,6 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
         let s = &self.input[start..start + count];
         let tok = Keyword::lookup(&s)
             .map(Token::Keyword)
-            .or_else(|| Primitive::lookup(&s).map(Token::Primitive))
             .unwrap_or_else(|| Token::Identifier);
         self.emit(tok)
     }

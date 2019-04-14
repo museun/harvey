@@ -1,8 +1,8 @@
 use super::*;
 
+/// Parse an identifier
 #[derive(Debug)]
 pub struct Identifier;
-
 impl<'a> Syntax<'a> for Identifier {
     type Output = hir::Identifier;
     fn test(&mut self, parser: &Parser<'a>) -> bool {

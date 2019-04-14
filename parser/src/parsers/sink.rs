@@ -32,6 +32,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::lexer::Lexer;
+
     #[test]
     fn sink() {
         let filename = diag::FileName::new("sink");

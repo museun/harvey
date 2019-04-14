@@ -20,7 +20,7 @@ where
 {
     type Output = Vec<T::Output>;
 
-    fn test(&mut self, parser: &Parser<'a>) -> bool {
+    fn test(&mut self, _parser: &Parser<'a>) -> bool {
         true // we will never produce empty lists
     }
 
@@ -39,6 +39,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::lexer::Lexer;
     use super::*;
 
     #[test]
@@ -49,8 +50,7 @@ mod tests {
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
         let mut syntax = List::new(Token::Integer, Sigil::Comma);
-        let res = crate::Parser::new(filename, &input, &tokens)
-            .parse_until_eof(&mut syntax)
+        let res = dbg!(Parser::new(filename, &input, &tokens).parse_until_eof(&mut syntax))
             .unwrap()
             .pop()
             .unwrap();
@@ -61,9 +61,8 @@ mod tests {
         let input: diag::Text = "1, 2, 3, 4,\n5,6,7,8,9,".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let list = crate::Parser::new(filename, &input, &tokens)
-            .parse_until_eof(&mut syntax)
-            .unwrap();
+        let list =
+            dbg!(Parser::new(filename, &input, &tokens).parse_until_eof(&mut syntax)).unwrap();
         assert_eq!(list.len(), 2);
 
         assert_eq!(list[0].len(), 4);

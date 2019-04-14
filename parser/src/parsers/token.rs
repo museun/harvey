@@ -57,30 +57,11 @@ impl<'a> Syntax<'a> for Sigil {
     }
 }
 
-impl<'a> Syntax<'a> for Primitive {
-    type Output = Spanned<Self, FileName>;
-    fn test(&mut self, parser: &Parser<'a>) -> bool {
-        parser.is(self.clone())
-    }
-
-    fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        if self.test(parser) {
-            let tok = parser.shift();
-            if let Token::Primitive(prim) = tok.value {
-                Ok(diag::Spanned::new(prim, tok.span))
-            } else {
-                Err(parser.report_error(parser.peek().span, format!("wanted '{}'", self)))
-            }
-        } else {
-            Err(parser.report_error(parser.peek().span, format!("expected '{}'", self)))
-        }
-    }
-}
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::lexer::Lexer;
+
     #[test]
     fn lex_token() {
         let filename = FileName::new("lex_token");

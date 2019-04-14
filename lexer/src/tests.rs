@@ -234,31 +234,6 @@ fn keywords() {
 }
 
 #[test]
-fn primitive() {
-    let inputs = &[
-        ("5_i8", Primitive::I8),
-        ("5_i16", Primitive::I16),
-        ("5_i32", Primitive::I32),
-        ("5_i64", Primitive::I64),
-        ("5_u8", Primitive::U8),
-        ("5_u16", Primitive::U16),
-        ("5_u32", Primitive::U32),
-        ("5_u64", Primitive::U64),
-        ("5_f32", Primitive::F32),
-        ("5_f64", Primitive::F64),
-    ];
-
-    for (input, expected) in inputs {
-        let mut lexer = Lexer::new(&input, CurrentFile {}).into_iter();
-        assert_eq!(lexer.next().unwrap().value, Token::Integer);
-        assert_eq!(lexer.next().unwrap().value, Token::Sigil(Sigil::Underscore));
-        assert_eq!(lexer.next().unwrap().value, Token::Primitive(*expected));
-        assert_eq!(lexer.next().unwrap().value, Token::EOF);
-        assert!(lexer.next().is_none());
-    }
-}
-
-#[test]
 #[ignore]
 fn demo() {
     let input: diag::Text = include_str!("../../foobar.harvey").into();

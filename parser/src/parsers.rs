@@ -1,6 +1,6 @@
 use crate::{Parser, Syntax};
 use diag::ErrorReported;
-use lexer::{Token, Lexer, Keyword, Sigil, Primitive,UnitToken};
+use lexer::{self, Keyword, Sigil, Token};
 
 type Result<T> = std::result::Result<T, ErrorReported>;
 

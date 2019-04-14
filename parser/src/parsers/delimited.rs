@@ -1,5 +1,4 @@
 use super::*;
-use std::fmt::Debug;
 
 #[derive(Debug)]
 pub struct Delimited<T, D> {
@@ -70,7 +69,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::lexer::Lexer;
     use super::*;
+
     #[test]
     fn delimited() {
         let filename = diag::FileName::new("delimited");

@@ -32,6 +32,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::lexer::Lexer;
+
     #[test]
     fn or() {
         let mut syntax = Or(Token::Identifier, Token::Integer);

@@ -92,13 +92,17 @@ impl<'a> Syntax<'a> for LitInteger {
                     return Err(parser.report_error(parser.peek().span, $msg));
                 }
                 while parser.test(&mut $syntax) {
-                    for d in parser.shift_str(&mut $syntax).chars().map(|d| {
+                    for d in parser.current_str().chars().map(|d| {
                         d.to_digit($base)
                             .map(i64::from)
                             .ok_or_else(|| parser.report_error(parser.current_span(), $msg))
                     }) {
                         out = $base * out + d?
                     }
+                    if parser.is(Token::Whitespace) {
+                        break;
+                    }
+                    parser.shift();
                     parser.expect(&mut Sink::new(Sigil::Underscore))?;
                 }
                 out
@@ -231,12 +235,21 @@ impl<'a> Syntax<'a> for LitFloat {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn asdfliteral() {
+    fn multi() {
         let _ = env_logger::builder()
             .default_format_timestamp(false)
             .try_init();
 
+        let filename = diag::FileName::new("multi");
+        let input: diag::Text = "1234 4321 1234 4321".into();
+        let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
+        dbg!(Parser::new(filename, &input, &tokens).parse_until_eof(&mut LitInteger));
+    }
+
+    #[test]
+    fn literals() {
         let expected = vec![
             hir::Literal::Integer(1234),
             hir::Literal::Float(1.234),

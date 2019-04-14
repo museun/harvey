@@ -1,6 +1,4 @@
 use super::*;
-use std::fmt::Debug;
-
 
 #[derive(Debug)]
 pub struct Surround<Open, Element, Close>(pub Open, pub Element, pub Close);
@@ -34,6 +32,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::lexer::Lexer;
     use super::*;
 
     #[test]

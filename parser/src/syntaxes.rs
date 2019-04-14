@@ -1,6 +1,6 @@
-use crate::{Parser, Syntax, parsers::*};
+use crate::{parsers::*, Parser, Syntax};
 use diag::ErrorReported;
-use lexer::{Token, Lexer, Keyword, Sigil, Primitive,UnitToken};
+use lexer::*;
 
 type Result<T> = std::result::Result<T, ErrorReported>;
 
@@ -19,6 +19,6 @@ use_this! {
     identifier;
     directive;
     variable;
-    consts;
-    literal;
+    // consts;
+    // literal;
 }
