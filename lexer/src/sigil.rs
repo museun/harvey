@@ -50,6 +50,7 @@ impl_as_sigil! {
     Prime        = "'";
     Tick         = "`";
     Star         = "*";
+    Hash         = "#";
     Backslash    = "\\";
     Slash        = "/";
     Minus        = "-";

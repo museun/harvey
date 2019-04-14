@@ -17,4 +17,6 @@ use_this! {
     path;
     import;
     identifier;
+    directive;
+    variable;
 }
