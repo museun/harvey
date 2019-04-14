@@ -68,6 +68,7 @@ mod tests {
 
         assert_eq!(list[0].len(), 4);
         assert!(list[0].iter().all(|k| k.value == Token::Integer));
+
         assert_eq!(list[1].len(), 5);
         assert!(list[1].iter().all(|k| k.value == Token::Integer));
     }

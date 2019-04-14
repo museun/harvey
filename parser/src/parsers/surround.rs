@@ -3,63 +3,32 @@ use std::fmt::Debug;
 
 
 #[derive(Debug)]
-pub struct Surround<T, S>(pub T, pub S);
+pub struct Surround<Open, Element, Close>(pub Open, pub Element, pub Close);
 
-impl<T, S> Surround<T, S> {
-    pub fn new(data: T, surround: S) -> Self {
-        Self(data, surround)
+impl<Open, Element, Close> Surround<Open, Element, Close> {
+    pub fn new(open: Open, element: Element, close: Close) -> Self {
+        Self(open, element, close)
     }
 }
 
-impl<'a, T, S> Syntax<'a> for Surround<T, S>
+impl<'a, Open, Element, Close> Syntax<'a> for Surround<Open, Element, Close>
 where
-    T: Syntax<'a>,
-    S: SurroundPair<'a>,
+    Open: Syntax<'a>,
+    Element: Syntax<'a>,
+    Close: Syntax<'a>,
 {
-    type Output = T::Output;
+    type Output = Element::Output;
 
     fn test(&mut self, parser: &Parser<'a>) -> bool {
-        self.1.open_syntax().test(parser)
+        self.0.test(parser)
     }
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        parser.expect(&mut self.1.open_syntax())?;
-        let res = parser.expect(&mut self.0)?;
-        parser.expect(&mut self.1.close_syntax())?;
+        let Surround(open, el, close) = self;
+        parser.expect(open)?;
+        let res = parser.expect(el)?;
+        parser.expect(close)?;
         Ok(res)
-    }
-}
-
-pub trait SurroundPair<'a>: Debug {
-    type Open: Syntax<'a>;
-    type Close: Syntax<'a>;
-
-    fn open_syntax(&mut self) -> &mut Self::Open;
-    fn close_syntax(&mut self) -> &mut Self::Close;
-}
-
-#[derive(Debug)]
-pub struct Pair<O, C>(pub O, pub C);
-
-impl<O, C> Pair<O, C> {
-    pub fn new(open: O, close: C) -> Self {
-        Self(open, close)
-    }
-}
-
-impl<'a, O, C> SurroundPair<'a> for Pair<O, C>
-where
-    O: Syntax<'a>,
-    C: Syntax<'a>,
-{
-    type Open = O;
-    type Close = C;
-
-    fn open_syntax(&mut self) -> &mut Self::Open {
-        &mut self.0
-    }
-    fn close_syntax(&mut self) -> &mut Self::Close {
-        &mut self.1
     }
 }
 
@@ -74,8 +43,9 @@ mod tests {
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
         let mut syntax = Surround::new(
+            Sigil::OpenBrace, //
             Token::Identifier,
-            Pair::new(Sigil::OpenBrace, Sigil::CloseBrace),
+            Sigil::CloseBrace,
         );
 
         let mut parser = crate::Parser::new(filename, &input, &tokens);
