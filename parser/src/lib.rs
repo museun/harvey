@@ -12,6 +12,7 @@ mod syntax;
 pub(crate) use syntax::Syntax;
 
 mod parsers;
+mod syntaxes;
 
 pub struct Parser<'a> {
     input: &'a Text,
@@ -58,6 +59,10 @@ impl<'a> Parser<'a> {
         kind.eq(&self.peek().value)
     }
 
+    pub fn current_span(&self) -> Span<FileName> {
+        self.last_span
+    }
+
     pub fn peek(&self) -> Spanned<lexer::Token, FileName> {
         self.lookahead_token
     }
@@ -71,7 +76,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn shift(&mut self) -> Spanned<lexer::Token, FileName> {
-        //assert!(!self.is(lexer::Token::EOF));
         self.last_span = self.lookahead_token.span;
         let last = self.lookahead_token;
         self.lookahead_token = self.eat(&[lexer::Token::Whitespace, lexer::Token::Comment]);
@@ -114,6 +118,7 @@ impl<'a> Parser<'a> {
         syntax.test(self)
     }
 
+    // TODO make this produce a Spanned<S::Output> with the aggregate of its parsers
     pub fn expect<S>(&mut self, syntax: &mut S) -> Result<S::Output, ErrorReported>
     where
         S: Syntax<'a>,
@@ -127,7 +132,7 @@ impl<'a> Parser<'a> {
         let diag = diag::Diagnostic::new(span, msg);
         if cfg!(test) {
             log::error!(
-                "{} got '{}' at {}:{}:{}",
+                "{}, got '{}' at {}:{}:{}",
                 diag.message,
                 &self.input[diag.span],
                 span.file().name(),

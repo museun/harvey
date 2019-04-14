@@ -30,7 +30,7 @@ impl Text {
     }
 
     pub fn get<F: super::SpanFile>(&self, span: Span<F>) -> Option<&str> {
-        if span.len() >= self.len() {
+        if span.len() > self.len() {
             return None;
         }
         Some(&self[span])
