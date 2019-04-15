@@ -3,22 +3,24 @@ use diag::{FileName, Spanned};
 
 impl<'a> Syntax<'a> for Token {
     type Output = Spanned<Self, FileName>;
+
     fn test(&mut self, parser: &Parser<'a>) -> bool {
         parser.is(self.clone())
     }
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        if self.test(parser) {
-            let tok = parser.shift();
-            Ok(diag::Spanned::new(tok.value, tok.span))
-        } else {
-            Err(parser.report_error(parser.peek().span, format!("expected '{}'", self)))
+        if !self.test(parser) {
+            return Err(parser.report_error_next(format!("expected '{}'", self)));
         }
+
+        let Spanned { value, span, .. } = parser.shift();
+        Ok(Spanned::new(value, span))
     }
 }
 
 impl<'a> Syntax<'a> for Keyword {
     type Output = Spanned<Self, FileName>;
+
     fn test(&mut self, parser: &Parser<'a>) -> bool {
         parser.is(self.clone())
     }
@@ -27,18 +29,17 @@ impl<'a> Syntax<'a> for Keyword {
         if self.test(parser) {
             let tok = parser.shift();
             if let Token::Keyword(keyword) = tok.value {
-                Ok(diag::Spanned::new(keyword, tok.span))
-            } else {
-                Err(parser.report_error(parser.peek().span, format!("wanted '{}'", self)))
+                return Ok(Spanned::new(keyword, tok.span));
             }
-        } else {
-            Err(parser.report_error(parser.peek().span, format!("expected '{}'", self)))
+            unreachable!("should have parsed a keyword")
         }
+        Err(parser.report_error_current(format!("expected '{}'", self)))
     }
 }
 
 impl<'a> Syntax<'a> for Sigil {
     type Output = Spanned<Self, FileName>;
+
     fn test(&mut self, parser: &Parser<'a>) -> bool {
         parser.is(self.clone())
     }
@@ -47,23 +48,22 @@ impl<'a> Syntax<'a> for Sigil {
         if self.test(parser) {
             let tok = parser.shift();
             if let Token::Sigil(sigil) = tok.value {
-                Ok(diag::Spanned::new(sigil, tok.span))
-            } else {
-                Err(parser.report_error(parser.peek().span, format!("wanted '{}'", self)))
+                return Ok(Spanned::new(sigil, tok.span));
             }
-        } else {
-            Err(parser.report_error(parser.peek().span, format!("expected '{}'", self)))
+            unreachable!("should have parsed a Sigil")
         }
+        Err(parser.report_error_current(format!("expected '{}'", self)))
     }
 }
 
+
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::lexer::Lexer;
+    use super::*;
 
     #[test]
-    fn lex_token() {
+    fn token() {
         let filename = FileName::new("lex_token");
 
         let input = "this is a test";
@@ -72,33 +72,39 @@ mod tests {
         let input: diag::Text = input.into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let mut parser = crate::Parser::new(filename, &input, &tokens);
+        let mut parser = Parser::new(filename, &input, &tokens);
         for (test, expected) in parser
             .parse_until_eof(&mut Token::Identifier)
             .unwrap()
             .iter()
             .zip(expected)
         {
-            assert_eq!(parser.string_at(test.span).unwrap(), expected);
+            assert_eq!(parser.string(test.span), expected);
         }
     }
 
     #[test]
-    fn lex_sigil() {
+    fn sigil() {
         let filename = FileName::new("lex_sigil");
 
         let input: diag::Text = "    () ()       ()\n   ()()()".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        assert!(crate::Parser::new(filename, &input, &tokens)
-            .parse_until_eof(&mut Token::Sigil(Sigil::Unit))
+        assert!(Parser::new(filename, &input, &tokens)
+            .parse_until_eof(&mut Sigil::Unit)
             .unwrap()
             .iter()
-            .all(|s| s.value == Token::Sigil(Sigil::Unit)));
+            .all(|s| s.value == Sigil::Unit));
+
+        let input: diag::Text = "->".into();
+        let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
+        dbg!(Parser::new(filename, &input, &tokens)
+            .expect(&mut Sigil::Arrow)
+            .unwrap());
     }
 
     #[test]
-    fn lex_keyword() {
+    fn keyword() {
         let mut params = [
             (Keyword::Let, "let"),
             (Keyword::When, "when"),
@@ -110,10 +116,10 @@ mod tests {
         for (param, input) in params.iter_mut() {
             let filename = FileName::new("lex_keyword");
 
-            let input: diag::Text = input.clone().into();
+            let input: diag::Text = (*input).into();
             let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-            let test = crate::Parser::new(filename, &input, &tokens)
+            let test = Parser::new(filename, &input, &tokens)
                 .parse_until_eof(param)
                 .unwrap();
 

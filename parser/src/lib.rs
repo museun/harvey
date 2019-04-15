@@ -8,4 +8,4 @@ mod parsers;
 mod syntaxes;
 
 mod parser;
-pub use parser::Parser;
+pub use self::parser::Parser;

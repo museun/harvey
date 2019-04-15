@@ -4,7 +4,6 @@ use super::*;
 pub struct List<T, D> {
     pub element: T,
     pub delimiter: D,
-
 }
 
 impl<T, D> List<T, D> {
@@ -26,12 +25,14 @@ where
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
         let mut output = vec![];
-        while self.element.test(parser) {
-            output.push(self.element.expect(parser)?);
-            if !self.delimiter.test(parser) {
+        while parser.test(&mut self.element) {
+            output.push(parser.expect(&mut self.element)?);
+            parser.skip(Token::Whitespace);
+            if !parser.test(&mut self.delimiter) {
                 break;
             }
-            parser.shift();
+            parser.expect(&mut self.delimiter)?;
+            parser.skip(Token::Whitespace);
         }
         Ok(output)
     }
@@ -44,13 +45,14 @@ mod tests {
 
     #[test]
     fn list() {
-        let filename = diag::FileName::new("delimited");
+        let filename = diag::FileName::new("list");
 
         let input: diag::Text = "1, 2, 3, 4, 5,6,7,8,9,".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
         let mut syntax = List::new(Token::Integer, Sigil::Comma);
-        let res = dbg!(Parser::new(filename, &input, &tokens).parse_until_eof(&mut syntax))
+        let res = Parser::new(filename, &input, &tokens)
+            .parse_until_eof(&mut syntax)
             .unwrap()
             .pop()
             .unwrap();
@@ -61,8 +63,9 @@ mod tests {
         let input: diag::Text = "1, 2, 3, 4,\n5,6,7,8,9,".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let list =
-            dbg!(Parser::new(filename, &input, &tokens).parse_until_eof(&mut syntax)).unwrap();
+        let list = Parser::new(filename, &input, &tokens)
+            .parse_until_eof(&mut syntax)
+            .unwrap();
         assert_eq!(list.len(), 2);
 
         assert_eq!(list[0].len(), 4);

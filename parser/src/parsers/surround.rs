@@ -50,10 +50,10 @@ mod tests {
         let mut parser = crate::Parser::new(filename, &input, &tokens);
         let ok = parser.expect(&mut syntax).unwrap();
         assert_eq!(ok.value, Token::Identifier);
-        assert_eq!(parser.string_at(ok.span).unwrap(), "foo");
+        assert_eq!(parser.string(ok.span), "foo");
 
         let ok = parser.expect(&mut syntax).unwrap();
         assert_eq!(ok.value, Token::Identifier);
-        assert_eq!(parser.string_at(ok.span).unwrap(), "foo");
+        assert_eq!(parser.string(ok.span), "foo");
     }
 }

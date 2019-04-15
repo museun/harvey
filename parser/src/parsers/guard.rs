@@ -18,7 +18,8 @@ where
     type Output = E::Output;
 
     fn test(&mut self, parser: &Parser<'a>) -> bool {
-        parser.test(&mut self.1)
+        let Guard(guard, ..) = self;
+        parser.test(guard)
     }
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
@@ -30,8 +31,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::lexer::Lexer;
+    use super::*;
 
     #[test]
     fn guard() {
@@ -40,15 +41,15 @@ mod tests {
         let input: diag::Text = "foo -> bar".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let mut syntax = Guard::new(Sigil::Arrow, Token::Identifier);
-        let mut parser = crate::Parser::new(filename, &input, &tokens);
-
+        let mut parser = Parser::new(filename, &input, &tokens);
         let tok = parser.expect(&mut Token::Identifier).unwrap();
         assert_eq!(tok.value, Token::Identifier);
-        assert_eq!(parser.string_at(tok.span).unwrap(), "foo");
+        assert_eq!(parser.string(tok.span), "foo");
 
-        let tok = parser.expect(&mut syntax).unwrap();
+        let tok = parser
+            .expect(&mut Guard::new(Sigil::Arrow, Token::Identifier))
+            .unwrap();
         assert_eq!(tok.value, Token::Identifier);
-        assert_eq!(parser.string_at(tok.span).unwrap(), "bar");
+        assert_eq!(parser.string(tok.span), "bar");
     }
 }

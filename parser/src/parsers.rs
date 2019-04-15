@@ -19,6 +19,6 @@ use_this! {
     list;
     sink;
     surround;
-    token;
+    tokens;
     or;
 }
