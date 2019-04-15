@@ -20,5 +20,5 @@ use_this! {
     directive;
     variable;
     // consts;
-    // literal;
+    literal;
 }

@@ -1,13 +1,14 @@
 [workspace]
 members = [
+    "transaction",
     "phf",
     "phf-derive",
+    "fsm",
+    "fsm-derive",
     "diag",
     "lexer",
     "parser",
-    "hir",
-    # "infer",    
+    "hir",    
+    # "infer",
     # "repl",
-    "fsm",
-    "fsm-derive",
 ]

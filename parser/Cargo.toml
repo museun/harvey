@@ -11,6 +11,7 @@ rand = "0.6.5"
 lexer = { path = "../lexer" }
 diag = { path = "../diag" }
 hir = { path = "../hir" }
+transaction = { path = "../transaction" }
 fsm = { path = "../fsm" }
 fsm-derive = { path = "../fsm-derive" }
 

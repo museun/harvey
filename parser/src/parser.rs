@@ -12,6 +12,16 @@ pub struct Parser<'a> {
     errors: Vec<Diagnostic>,
 }
 
+impl<'a> Clone for Parser<'a> {
+    fn clone(&self) -> Self {
+        Self {
+            errors: vec![],
+            ..*self
+        }
+    }
+}
+
+
 impl<'a> Parser<'a> {
     pub fn new(
         filename: FileName,
@@ -37,6 +47,10 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn checkpoint(&mut self) -> Transaction<Self> {
+        Transaction::new(self)
+    }
+
     pub fn is(&self, kind: impl PartialEq<lexer::Token>) -> bool {
         kind.eq(&self.tokens[self.pos].value)
     }
@@ -60,10 +74,23 @@ impl<'a> Parser<'a> {
         &self.input[span]
     }
 
+    pub fn current_str(&self) -> &'a str {
+        &self.input[self.current]
+    }
+
     pub fn shift(&mut self) -> Spanned<lexer::Token, FileName> {
+        let prev = self.previous;
         self.previous = self.current;
         let current = self.tokens[self.pos];
         self.pos += 1;
+        log::trace!(
+            "shift: {} << {} ({}) -> {:?}",
+            prev.end() - prev.start(),
+            self.current.end() - self.current.start(),
+            self.pos,
+            current
+        );
+        self.current = current.span;
         current
     }
 

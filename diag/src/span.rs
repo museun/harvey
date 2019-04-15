@@ -1,11 +1,24 @@
 use super::*;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Span<F: SpanFile> {
     file: F,
     pub(crate) start: usize,
     pub(crate) end: usize,
     pub(crate) line: usize,
+}
+
+impl<F: SpanFile> std::fmt::Debug for Span<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}:{}:{}..{}",
+            self.file.name(),
+            self.line,
+            self.start,
+            self.end
+        )
+    }
 }
 
 impl<F: SpanFile> Span<F> {
@@ -72,6 +85,7 @@ impl<F: SpanFile> Span<F> {
 
 impl<F: SpanFile> std::ops::Index<Span<F>> for str {
     type Output = str;
+
     fn index(&self, range: Span<F>) -> &Self::Output {
         &self[range.start..range.end]
     }

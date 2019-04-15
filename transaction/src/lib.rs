@@ -42,6 +42,7 @@ impl<'a, T: Clone> std::ops::DerefMut for Transaction<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn transaction() {
         #[derive(Clone, Debug)]

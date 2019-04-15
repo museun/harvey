@@ -8,6 +8,7 @@ edition = "2018"
 parser = { path = "../parser" }
 lexer = { path = "../lexer" }
 diag = { path = "../diag" }
+transaction = { path = "../transaction" }
 colored = "1.7.0"
 linefeed = "0.5.4"
 

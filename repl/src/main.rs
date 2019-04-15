@@ -5,7 +5,6 @@ use linefeed::{Interface, ReadResult};
 mod util;
 use util::*;
 
-mod transaction;
 use transaction::Transaction;
 
 mod history;
