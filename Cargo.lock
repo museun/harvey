@@ -117,6 +117,8 @@ name = "lexer"
 version = "0.1.0"
 dependencies = [
  "diag 0.1.0",
+ "fsm 0.1.0",
+ "fsm-derive 0.1.0",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "phf 0.1.0",
  "phf-derive 0.1.0",
