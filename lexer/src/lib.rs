@@ -11,7 +11,7 @@ mod unit;
 
 pub use self::keyword::Keyword;
 pub use self::sigil::Sigil;
-pub use self::token::{Invalid, Token};
+pub use self::token::{Invalid, Literal, Token};
 pub use self::unit::UnitToken;
 
 pub struct Lexer<'a, F: SpanFile> {
@@ -74,12 +74,23 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
             (x @ '(', Some('*')) | (x @ '/', Some('/')) => self.comment(x),
             ('\n', ..) => self.emit(Token::NewLine),
             (c, ..) if c.is_ascii_whitespace() && c != '\n' => self.emit(Token::Whitespace),
-            ('"', ..) => self.string(),
-            (c, ..) if c.is_ascii_digit() => self.emit(Token::Integer),
+            ('"', ..) => self.literal(),
+            (c, ..) if c.is_ascii_digit() => self.literal(),
             (c, ..) if c.is_ascii_alphabetic() => self.ident(),
             (c, ..) if c.is_ascii_punctuation() => self.sigil(),
             (_, ..) => self.emit(Token::Invalid(Invalid::UnknownToken)),
         };
+
+        if let Some(front) = self.buf.front() {
+            use UnitToken as _;
+            if std::mem::discriminant(&front.value) != std::mem::discriminant(&Sigil::unit()) {
+                if let Some(front) = self.buf.pop_front() {
+                    self.buf.push_back(tok);
+                    return front;
+                }
+            }
+        }
+
         log::debug!("tok: {:?}", tok);
         tok
     }
@@ -117,22 +128,148 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
         self.emit(Token::Comment)
     }
 
-    // TODO handle nested strings
-    fn string(&mut self) -> Spanned<Token, F> {
-        self.start += 1;
-        while let Some(&ch) = self.peek() {
-            let prev = self.current.unwrap();
-            self.advance();
-            if ch == '"' {
-                if prev == '\\' {
-                    continue;
+    fn literal(&mut self) -> Spanned<Token, F> {
+        let mut current;
+
+        use Literal::*;
+        macro_rules! start {
+            ($lit:expr) => {{
+                let tok = self.emit(Token::BeginLiteral($lit));
+                current = $lit;
+                self.buf.push_back(tok)
+            }};
+        }
+
+        macro_rules! end {
+            ($lit:expr) => {
+                return self.emit(Token::EndLiteral($lit));
+            };
+        }
+
+        match self.current.unwrap() {
+            '"' => start!(String),
+            '0' => match self.peek() {
+                Some('x') => {
+                    start!(Hexadecimal);
+                    self.advance();
                 }
-                self.pos -= 1;
-                break;
+                Some('o') => {
+                    start!(Octal);
+                    self.advance();
+                }
+                Some('b') => {
+                    start!(Binary);
+                    self.advance();
+                }
+                _ => start!(Integer),
+            },
+            _ => start!(Integer),
+        }
+
+        fn is_hex(c: char) -> bool {
+            match c {
+                '0'...'9' | 'a'...'f' | 'A'...'F' => true,
+                _ => false,
             }
         }
-        self.emit(Token::String)
+        fn is_oct(c: char) -> bool {
+            match c {
+                '0'...'7' => true,
+                _ => false,
+            }
+        }
+        fn is_bin(c: char) -> bool {
+            match c {
+                '0' | '1' => true,
+                _ => false,
+            }
+        }
+
+        use fsm::State;
+        #[derive(Clone, Copy, PartialEq, PartialOrd, fsm_derive::State)]
+        enum DumbFloatShit {
+            Characteristic,
+            Fractional,
+            Exponent,
+        }
+        use DumbFloatShit::*;
+        let mut state = DumbFloatShit::start();
+
+        // TODO determine where _ are invalid
+        loop {
+            match (current, self.peek()) {
+                // this needs to be done later so the ends!() can happen
+                (_, Some('_')) => {}
+
+                (String, Some('"')) => {
+                    // TODO count nested \
+                    if self.current.unwrap() != '\\' {
+                        self.advance();
+                        end!(String)
+                    }
+                }
+
+                (String, Some(..)) => (),
+
+                (Integer, Some(c)) => match c {
+                    '.' | 'E' | 'e' => {
+                        self.buf.back_mut().unwrap().value = Token::BeginLiteral(Literal::Float);
+                        current = Literal::Float;
+                        state.goto(Fractional);
+                    }
+                    d if d.is_ascii_digit() => (),
+                    _ => end!(Integer),
+                },
+
+                (Float, Some(c)) => match (state, c) {
+                    (Characteristic, '.') => {
+                        state.goto(Fractional);
+                    }
+
+                    (s, 'E') | (s, 'e') if s < Exponent => {
+                        state.goto(Exponent);
+                    }
+
+                    (Exponent, '+') | (Exponent, '-') => (),
+
+                    // +/- can only follow e or E
+                    (_, '+') | (_, '-') => end!(Float),
+
+                    (_, d) if d.is_ascii_digit() => (),
+                    _ => end!(Float),
+                },
+
+                (Hexadecimal, Some(&c)) if is_hex(c) => (),
+                (Hexadecimal, Some(..)) => end!(Hexadecimal),
+
+                (Octal, Some(&c)) if is_oct(c) => (),
+                (Octal, Some(..)) => end!(Octal),
+
+                (Binary, Some(&c)) if is_bin(c) => (),
+                (Binary, Some(..)) => end!(Binary),
+
+                (l, None) => end!(l),
+            }
+            self.advance();
+        }
     }
+
+    // // TODO handle nested strings
+    // fn string(&mut self) -> Spanned<Token, F> {
+    //     self.start += 1;
+    //     while let Some(&ch) = self.peek() {
+    //         let prev = self.current.unwrap();
+    //         self.advance();
+    //         if ch == '"' {
+    //             if prev == '\\' {
+    //                 continue;
+    //             }
+    //             self.pos -= 1;
+    //             break;
+    //         }
+    //     }
+    //     self.emit(Token::String)
+    // }
 
     fn ident(&mut self) -> Spanned<Token, F> {
         let start = self.index - 1;

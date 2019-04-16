@@ -5,7 +5,9 @@ authors = ["museun <museun@outlook.com>"]
 edition = "2018"
 
 [dependencies]
+log = "0.4.6"
 diag = { path = "../diag" }
 phf = { path = "../phf" }
 phf-derive = { path = "../phf-derive" }
-log = "0.4.6"
+fsm = { path = "../fsm" }
+fsm-derive = { path = "../fsm-derive" }
