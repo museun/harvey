@@ -19,6 +19,6 @@ use_this! {
     identifier;
     directive;
     variable;
-    //consts;
+    consts;
     literal;
 }

@@ -16,7 +16,7 @@ impl<'a> Syntax<'a> for Literal {
             (true, _, _) => LitNumber.expect(parser),
             (_, true, _) => LitFloat.expect(parser),
             (_, _, true) => LitString.expect(parser),
-            _ => unreachable!(),
+            e => unreachable!("{:?}: {}", e, parser.current_str()),
         }
     }
 }
