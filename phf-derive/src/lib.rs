@@ -161,8 +161,9 @@ fn make_lookup(
 
         impl std::fmt::Display for #ident {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                use #ident::*;
                 match self {
-                    #(variants => write!(f, "{}", #tokens),)*
+                    #(#variants => write!(f, "{}", #tokens),)*
                 }
             }
         }

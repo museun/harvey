@@ -50,19 +50,18 @@ pub enum Type {
     Enum(Enum),
     Union(Union),
     Alias(Alias),
-    Tuple(Tuple), // this should be implicit
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Record {
     pub identifier: Identifier,
     pub generics: Vec<Identifier>,
-    pub fields: Vec<(Identifier, Type)>,
+    pub fields: Vec<(Identifier, Identifier)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Enum {
-    pub identifiers: Identifier,
+    pub identifier: Identifier,
     pub generics: Vec<Identifier>,
     pub variants: Vec<(Identifier, Variable)>,
 }
@@ -77,11 +76,6 @@ pub struct Union {
 pub struct Alias {
     pub left: Identifier,
     pub right: Identifier,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Tuple {
-    pub elements: Vec<Identifier>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -159,10 +159,7 @@ impl<'a> Parser<'a> {
     {
         self.skip(lexer::Token::Whitespace);
         log::debug!("expect! {:?} -> {:?}", syntax, self.peek());
-        syntax.expect(self).and_then(|t| {
-            self.skip(lexer::Token::Whitespace);
-            Ok(t)
-        })
+        syntax.expect(self)
     }
 
     pub fn report_error(&mut self, span: Span<FileName>, msg: impl ToString) -> ErrorReported {

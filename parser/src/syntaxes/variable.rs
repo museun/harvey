@@ -1,6 +1,5 @@
 use super::*;
 
-/// Parse an identifier
 #[derive(Debug)]
 pub struct Variable;
 impl<'a> Syntax<'a> for Variable {
@@ -11,13 +10,10 @@ impl<'a> Syntax<'a> for Variable {
     }
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        if !self.test(parser) {
-            return Err(parser.report_error_current("expected a variable"));
-        }
+        parser.expect(&mut Token::Identifier)?;
 
-        let diag::Spanned { span, .. } = parser.shift();
         Ok(hir::Variable {
-            name: parser.string(span).to_string(),
+            name: parser.current_str().to_string(),
         })
     }
 }

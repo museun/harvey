@@ -27,12 +27,10 @@ where
         let mut output = vec![];
         while parser.test(&mut self.element) {
             output.push(parser.expect(&mut self.element)?);
-            parser.skip(Token::Whitespace);
             if !parser.test(&mut self.delimiter) {
                 break;
             }
             parser.expect(&mut self.delimiter)?;
-            parser.skip(Token::Whitespace);
         }
         Ok(output)
     }
@@ -50,7 +48,10 @@ mod tests {
         let input: diag::Text = "A, B, C, D, E,a,b,c,d,".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let mut syntax = List::new(Token::Identifier, Sigil::Comma);
+        let mut syntax = List::new(
+            Token::Identifier,
+            Then(Sigil::Comma, Sink(Token::Whitespace)),
+        );
         let res = Parser::new(filename, &input, &tokens)
             .parse_until_eof(&mut syntax)
             .unwrap()

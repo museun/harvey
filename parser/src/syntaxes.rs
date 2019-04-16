@@ -21,4 +21,5 @@ use_this! {
     variable;
     consts;
     literal;
+    r#type;
 }
