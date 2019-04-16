@@ -10,16 +10,14 @@ impl<'a> Syntax<'a> for Import {
     }
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        if !self.test(parser) {
-            return Err(parser.report_error(parser.current_span(), "expected `import`"));
-        }
-        parser.shift();
+        parser.expect(&mut Keyword::Import)?;
+
         let span = parser.current_span();
         let mut syntax = Path;
 
         let head = parser.expect(&mut syntax)?;
         if let hir::Path::Glob = head {
-            return Err(parser.report_error(parser.current_span(), "invalid import"));
+            return Err(parser.report_error_current("invalid import: glob cannot be used there"));
         }
 
         let mut paths = vec![];
@@ -29,7 +27,9 @@ impl<'a> Syntax<'a> for Import {
                 parser.shift();
                 let head = parser.expect(&mut syntax)?;
                 if let hir::Path::Glob = head {
-                    return Err(parser.report_error(parser.current_span(), "invalid import"));
+                    return Err(
+                        parser.report_error_current("invalid import: glob cannot be used there")
+                    );
                 }
                 paths.push(std::mem::replace(&mut path, vec![head]));
                 continue;
@@ -40,8 +40,6 @@ impl<'a> Syntax<'a> for Import {
             }
             parser.expect(&mut Sigil::Dot)?;
             path.push(parser.expect(&mut syntax)?);
-            // TODO need to make sure _ is at the end of paths, never in the middle/front
-
         }
         if !path.is_empty() {
             paths.push(path)
