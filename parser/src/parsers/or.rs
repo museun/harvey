@@ -31,18 +31,18 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::lexer::Lexer;
+    use super::*;
 
     #[test]
     fn or() {
-        let mut syntax = Or(Token::Identifier, Token::Integer);
+        let mut syntax = Or(Sigil::Comma, Sigil::Dot);
 
         let inputs = &[
-            ("FF", vec![Token::Identifier, Token::Identifier]),
-            ("11", vec![Token::Integer, Token::Integer]),
-            ("1F", vec![Token::Integer, Token::Identifier]),
-            ("F1", vec![Token::Identifier, Token::Integer]),
+            (",,", vec![Sigil::Comma, Sigil::Comma]),
+            ("..", vec![Sigil::Dot, Sigil::Dot]),
+            (".,", vec![Sigil::Dot, Sigil::Comma]),
+            (",.", vec![Sigil::Comma, Sigil::Dot]),
         ];
         let file = diag::FileName::new("or");
 

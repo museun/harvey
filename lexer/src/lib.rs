@@ -5,13 +5,15 @@ use std::str::Chars;
 use diag::{Span, SpanFile, Spanned};
 
 mod keyword;
+mod literal;
 mod sigil;
 mod token;
 mod unit;
 
 pub use self::keyword::Keyword;
+pub use self::literal::Literal;
 pub use self::sigil::Sigil;
-pub use self::token::{Invalid, Literal, Token};
+pub use self::token::{Invalid, Token};
 pub use self::unit::UnitToken;
 
 pub struct Lexer<'a, F: SpanFile> {
@@ -191,6 +193,7 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
             Characteristic,
             Fractional,
             Exponent,
+            End,
         }
         use DumbFloatShit::*;
         let mut state = DumbFloatShit::start();
@@ -230,7 +233,9 @@ impl<'a, F: SpanFile> Lexer<'a, F> {
                         state.goto(Exponent);
                     }
 
-                    (Exponent, '+') | (Exponent, '-') => (),
+                    (Exponent, '+') | (Exponent, '-') => {
+                        state.goto(End);
+                    }
 
                     // +/- can only follow e or E
                     (_, '+') | (_, '-') => end!(Float),

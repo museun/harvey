@@ -5,24 +5,17 @@ pub struct Literal;
 impl<'a> Syntax<'a> for Literal {
     type Output = hir::Literal;
     fn test(&mut self, parser: &Parser<'a>) -> bool {
-        parser.test(&mut LitInteger) || parser.test(&mut LitFloat) || parser.test(&mut LitString)
+        parser.test(&mut LitNumber) || parser.test(&mut LitFloat) || parser.test(&mut LitString)
     }
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
         match (
-            parser.test(&mut LitInteger) || parser.test(&mut LitFloat),
+            parser.test(&mut LitNumber),
+            parser.test(&mut LitFloat),
             parser.test(&mut LitString),
         ) {
-            (true, false) => {
-                let mut checkpoint = parser.checkpoint();
-                LitFloat
-                    .expect(&mut checkpoint)
-                    .and_then(|ok| {
-                        checkpoint.commit();
-                        Ok(ok)
-                    })
-                    .or_else(|_| LitInteger.expect(parser))
-            }
-            (false, true) => LitString.expect(parser),
+            (true, _, _) => LitNumber.expect(parser),
+            (_, true, _) => LitFloat.expect(parser),
+            (_, _, true) => LitString.expect(parser),
             _ => unreachable!(),
         }
     }
@@ -34,99 +27,56 @@ impl<'a> Syntax<'a> for LitString {
     type Output = hir::Literal;
 
     fn test(&mut self, parser: &Parser<'a>) -> bool {
-        parser.is(Token::String)
+        parser.is(lexer::Literal::String)
     }
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        let diag::Spanned { span, .. } = parser.expect(&mut Token::String)?;
-        Ok(hir::Literal::String(parser.string(span).to_string()))
+        let diag::Spanned { span, .. } = parser.expect(&mut lexer::Literal::String)?;
+        let s = parser.string(span);
+        let s = if s.len() >= 2 { &s[1..s.len() - 1] } else { s };
+        Ok(hir::Literal::String(s.to_string()))
     }
 }
 
 #[derive(Debug)]
-pub struct LitInteger;
-impl<'a> Syntax<'a> for LitInteger {
+pub struct LitNumber;
+impl<'a> Syntax<'a> for LitNumber {
     type Output = hir::Literal;
     fn test(&mut self, parser: &Parser<'a>) -> bool {
-        parser.is(Sigil::Minus) || parser.is(Token::Integer)
+        parser.is(Sigil::Minus)
+            || parser.test(&mut lexer::Literal::Integer)
+            || parser.test(&mut lexer::Literal::Hexadecimal)
+            || parser.test(&mut lexer::Literal::Octal)
+            || parser.test(&mut lexer::Literal::Binary)
     }
+
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        let neg = parser.is(Sigil::Minus);
-        if neg {
+        let neg = if parser.test(&mut Sigil::Minus) {
             parser.shift();
-        }
-        enum Mode {
-            Dec(char),
-            Hex,
-            Oct,
-            Bin,
-        }
-        use Mode::*;
+            true
+        } else {
+            false
+        };
+        use lexer::Literal::*;
 
-        let diag::Spanned { span, .. } = parser.expect(&mut Token::Integer)?;
-        let mode = match dbg!(parser.string(span)).chars().next().unwrap() {
-            '0' if parser.is(Token::Identifier) => {
-                let diag::Spanned { span, .. } = parser.expect(&mut Token::Identifier)?;
-                match parser.string(span).chars().next() {
-                    Some('x') => Mode::Hex,
-                    Some('o') => Mode::Oct,
-                    Some('b') => Mode::Bin,
-                    Some(d) => {
-                        let msg = format!("invalid suffix: {}", d);
-                        return Err(parser.report_error_current(msg));
-                    }
-                    _ => unimplemented!(),
-                }
-            }
-            c => Mode::Dec(c),
+        let (mut kind, radix) = match (
+            parser.test(&mut Integer),
+            parser.test(&mut Hexadecimal),
+            parser.test(&mut Octal),
+            parser.test(&mut Binary),
+        ) {
+            (true, _, _, _) => (Integer, 10),
+            (_, true, _, _) => (Hexadecimal, 16),
+            (_, _, true, _) => (Octal, 8),
+            (_, _, _, true) => (Binary, 2),
+            s => unreachable!("{:?}", s),
         };
 
-        let mut out = 0i64;
-        macro_rules! parse {
-            (base $base:expr, $syntax:expr, msg=> $msg:expr) => {{
-                if !parser.test(&mut $syntax) {
-                    return Err(parser.report_error_next($msg));
-                }
-                loop {
-                    if !parser.test(&mut $syntax) {
-                        break;
-                    }
-                    parser.expect(&mut $syntax)?;
-                    for d in parser.current_str().chars().map(|d| {
-                        d.to_digit($base)
-                            .map(i64::from)
-                            .ok_or_else(|| parser.report_error(parser.current_span(), $msg))
-                    }) {
-                        out = $base * out + d?
-                    }
-                    if parser.is(Token::Whitespace) || parser.is(Token::EOF) {
-                        break;
-                    }
-                    if !parser.is(Token::Integer) && !parser.is(Sigil::Underscore) {
-                        return Err(parser.report_error_next("invalid integer"));
-                    }
-                    parser.expect(&mut Sink::new(Sigil::Underscore))?;
-                }
-                out
-            }};
-        }
-
-        let out = match mode {
-            Dec(head) => {
-                parser.expect(&mut Sink::new(Sigil::Underscore))?;
-                out = head.to_digit(10).map(i64::from).unwrap();
-                parse!(base 10, Token::Integer, msg=> "invalid decimal digit")
-            }
-            Hex => {
-                let mut syntax = Or::new(Token::Identifier, Token::Integer);
-                parse!(base 16, syntax, msg=> "invalid hexadecimal digit")
-            }
-            Oct => parse!(base 8,  Token::Integer, msg=> "invalid octal digit"),
-            Bin => parse!(base 2,  Token::Integer, msg=> "invalid binary digit"),
-        };
-
-        parser.expect(&mut Token::Integer)?;
-        dbg!(Ok(hir::Literal::Integer(if neg { -out } else { out })))
+        let diag::Spanned { span, .. } = parser.expect(&mut kind)?;
+        parse_string(&parser.string(span), radix)
+            .map(|k| if neg { -k } else { k })
+            .map(hir::Literal::Integer)
+            .map_err(|d| parser.report_error(span, format!("invalid {} literal at {}", kind, d)))
     }
 }
 
@@ -136,94 +86,114 @@ impl<'a> Syntax<'a> for LitFloat {
     type Output = hir::Literal;
 
     fn test(&mut self, parser: &Parser<'a>) -> bool {
-        parser.is(Sigil::Minus) || parser.is(Token::Integer)
+        parser.is(Sigil::Minus)
+            || parser.test(&mut lexer::Literal::Float)
+            || parser.test(&mut Token::Identifier)
     }
 
     fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
-        let neg = parser.test(&mut Sigil::Minus);
-        if neg {
+        let neg = if parser.test(&mut Sigil::Minus) {
             parser.shift();
-        }
-
-        macro_rules! err {
-            ($msg:expr) => {
-                return Err(parser.report_error_current($msg));
-            };
-        }
+            true
+        } else {
+            false
+        };
 
         if parser.test(&mut Token::Identifier) {
             let diag::Spanned { span, .. } = parser.expect(&mut Token::Identifier)?;
-            let s = parser.string(span);
-            return match s {
-                "NaN" => Ok(hir::Literal::Float(std::f64::NAN)),
-                "inf" => Ok(hir::Literal::Float(if neg {
-                    std::f64::NEG_INFINITY
-                } else {
-                    std::f64::INFINITY
-                })),
-                d => err!(format!("unknown float literal: {}", d)),
-            };
+            match parser.current_str() {
+                s @ "inf" | s @ "NaN" => {
+                    return [if neg { "-" } else { "" }, s]
+                        .concat()
+                        .parse()
+                        .map(hir::Literal::Float)
+                        .map_err(|_| parser.report_error(span, "invalid float literal"))
+                }
+                e => unreachable!("unreachable float string {:?}", e),
+            }
         }
 
-        use fsm::State as _;
-        #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, fsm_derive::State)]
-        enum Float {
-            Integral,
-            Fractional,
-            Exponent,
-            End,
+        let diag::Spanned { span, .. } = parser.expect(&mut lexer::Literal::Float)?;
+
+        let mut periods = false;
+        let mut signs = false;
+        let mut exponents = false;
+
+        // TODO subspan
+        macro_rules! float_err {
+            ($msg:expr) => {{
+                return Err(parser.report_error(span, $msg));
+            }};
+            ($f:expr, $($args:expr),* $(,)?)  => {{
+                return Err(parser.report_error(span, format!($f, $($args,)*)));
+            }};
         }
 
-        let mut start = dbg!(parser.current_span());
-        let mut float = Float::start();
-        let mut previous = dbg!(parser.current_str());
-        loop {
-            let current = parser.current_str().trim(); // HMM
-            match current {
-                "E" | "e" => {
-                    if previous == "." {
-                        err!("cannot place . here")
-                    }
-                    float.goto(Float::Exponent);
-                }
-                "+" | "-" => {
-                    float.goto(Float::End);
-                }
-                "." => {
-                    float.goto(Float::Fractional);
-                }
-                "_" => {}
-                d => {
-                    if !d
-                        .chars()
-                        .inspect(|k| eprintln!("{:?}", k))
-                        .all(|d| d.is_ascii_digit())
-                    {
-                        eprintln!("not all digits");
-                        break;
-                    }
-                }
+        fn valid(last: Option<char>, ch: char) -> bool {
+            if last != Some('.') || last.is_none() {
+                return true;
             }
 
-            if (parser.is(Sigil::Minus) || parser.is(Sigil::Plus)) && float == Float::End {
-                break;
+            match ch {
+                'e' | 'E' | '+' | '-' | '.' | '_' => false,
+                _ => true,
             }
-
-            let diag::Spanned { span, value, .. } = parser.shift();
-            if value == Token::EOF {
-                break;
-            }
-            start = start.extend(span);
-            previous = current;
         }
 
-        dbg!(Ok(hir::Literal::Float(
-            parser
-                .string(start)
-                .parse()
-                .or_else(|_| Err(parser.report_error(start, "invalid float literal")),)?
-        )))
+        let string = parser.string(span);
+        let mut last = None;
+        let mut buf = String::with_capacity(string.len());
+        for ch in string.chars() {
+            match ch {
+                d if !valid(last, d) => float_err!("{} cannot follow .", d),
+                d if d.is_ascii_digit() => (),
+
+                'E' | 'e' if exponents => float_err!("too many exponents"),
+                'E' | 'e' => exponents = true,
+                '-' | '+' if signs => float_err!("too many signs"),
+                '-' | '+' => signs = true,
+                '.' if periods => float_err!("too many periods"),
+                '.' => periods = true,
+
+                '_' => continue,
+
+                d => float_err!("invalid character: {}", d),
+            }
+            buf.push(ch);
+            last.replace(ch);
+        }
+
+        if neg {
+            buf.insert(0, '-')
+        }
+
+        buf.parse()
+            .map(hir::Literal::Float)
+            .map_err(|_| parser.report_error(span, "invalid float literal"))
     }
+}
+
+fn parse_string(input: &str, radix: i64) -> std::result::Result<i64, usize> {
+    let head = match radix {
+        16 | 8 | 2 => 2,
+        _ => 0,
+    };
+    if input.len() <= head {
+        return Err(input.len());
+    }
+
+    let mut out = 0;
+    for (i, ch) in input.chars().enumerate().skip(head) {
+        if ch == '_' {
+            if i <= head {
+                return Err(i);
+            }
+            continue;
+        }
+        let ch = ch.to_digit(radix as u32).map(i64::from).ok_or_else(|| i)?;
+        out = out * radix + ch;
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -232,10 +202,6 @@ mod tests {
 
     #[test]
     fn literals() {
-        // let _ = env_logger::builder()
-        //     .default_format_timestamp(false)
-        //     .try_init();
-
         let expected = vec![
             hir::Literal::Integer(0x123),
             hir::Literal::Float(45.67),
@@ -245,8 +211,12 @@ mod tests {
 
         let filename = diag::FileName::new("literal");
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
+
+        let mut syntax =
+            crate::parsers::Then::new(Literal, crate::parsers::Sink::new(Token::Whitespace));
+
         Parser::new(filename, &input, &tokens)
-            .parse_until_eof(&mut Literal)
+            .parse_until_eof(&mut syntax)
             .unwrap()
             .iter()
             .zip(expected.iter())
@@ -256,16 +226,16 @@ mod tests {
     #[test]
     fn multi_integer() {
         let filename = diag::FileName::new("multi");
-        let input: diag::Text = "1234 4321 5678 8765".into();
+        let input: diag::Text = "1234 -4321 -5678 8765".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
         assert_eq!(
             Parser::new(filename, &input, &tokens)
-                .parse_until_eof(&mut LitInteger)
+                .parse_until_eof(&mut LitNumber)
                 .unwrap(),
             vec![
                 hir::Literal::Integer(1234),
-                hir::Literal::Integer(4321),
-                hir::Literal::Integer(5678),
+                hir::Literal::Integer(-4321),
+                hir::Literal::Integer(-5678),
                 hir::Literal::Integer(8765),
             ]
         );
@@ -294,22 +264,53 @@ mod tests {
     }
 
     #[test]
-    fn literal_integer() {
-        let filename = diag::FileName::new("literal_integer");
+    fn literal_hexadecimal() {
+        let filename = diag::FileName::new("literal_hexadecimal");
         let inputs = &[
-            ("-1234", -1234),
-            ("1234", 1234),
-            ("-1_000_000", -1_000_000),
-            ("1_000_000", 1_000_000),
-            ("1_2__3___", 123),
             ("-0x1024", -4132),
             ("0x1024", 4132),
             ("-0x1_024", -4132),
             ("0x10___24", 4132),
+        ];
+
+        for (input, expected) in inputs {
+            let input: diag::Text = (*input).into();
+            let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
+            assert_eq!(
+                Parser::new(filename, &input, &tokens)
+                    .expect(&mut LitNumber)
+                    .expect("valid hexadecimal"),
+                hir::Literal::Integer(*expected)
+            );
+        }
+    }
+
+    #[test]
+    fn literal_octal() {
+        let filename = diag::FileName::new("literal_octal");
+        let inputs = &[
             ("-0o033", -27),
             ("0o033", 27),
             ("-0o0_3_3", -27),
             ("0o03_3___", 27),
+        ];
+
+        for (input, expected) in inputs {
+            let input: diag::Text = (*input).into();
+            let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
+            assert_eq!(
+                Parser::new(filename, &input, &tokens)
+                    .expect(&mut LitNumber)
+                    .expect("valid octal"),
+                hir::Literal::Integer(*expected)
+            );
+        }
+    }
+
+    #[test]
+    fn literal_binary() {
+        let filename = diag::FileName::new("literal_binary");
+        let inputs = &[
             ("-0b10110010", -178),
             ("0b10110010", 178),
             ("-0b1011_0010", -178),
@@ -321,7 +322,31 @@ mod tests {
             let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
             assert_eq!(
                 Parser::new(filename, &input, &tokens)
-                    .expect(&mut LitInteger)
+                    .expect(&mut LitNumber)
+                    .expect("valid binary"),
+                hir::Literal::Integer(*expected)
+            );
+        }
+    }
+
+    #[test]
+    fn literal_integer() {
+        let filename = diag::FileName::new("literal_integer");
+        let inputs = &[
+            ("1234", 1234),
+            ("-1234", -1234),
+            ("1_000_000", 1_000_000),
+            ("-1_000_000", -1_000_000),
+            ("1_2__3___", 123),
+        ];
+
+        for (input, expected) in inputs {
+            let input: diag::Text = (*input).into();
+            let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
+
+            assert_eq!(
+                Parser::new(filename, &input, &tokens)
+                    .expect(&mut LitNumber)
                     .expect("valid integer"),
                 hir::Literal::Integer(*expected)
             );
@@ -331,20 +356,21 @@ mod tests {
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
         assert_eq!(
             Parser::new(filename, &input, &tokens)
-                .parse_until_eof(&mut LitInteger)
+                .parse_until_eof(&mut LitNumber)
                 .unwrap(),
             vec![hir::Literal::Integer(1234), hir::Literal::Integer(4321)]
         );
+    }
 
-        for bad in &[
-            "_1234", "0x_1234", "0xGG", "0b_1", "0b77", "0o_1", "0o9", "0f1234", "0X1234", "1.234",
-            "45.56",
-        ] {
+    #[test]
+    fn bad_number_literals() {
+        let filename = diag::FileName::new("bad_number_literals");
+        for bad in &["0x_1234", "0xGG", "0b_1", "0b77", "0o_1", "0o9"] {
             let bad: diag::Text = (*bad).into();
             let tokens = Lexer::new(&bad, filename).into_iter().collect::<Vec<_>>();
 
             Parser::new(filename, &bad, &tokens)
-                .expect(&mut LitInteger)
+                .expect(&mut LitNumber)
                 .unwrap_err();
         }
     }
@@ -353,14 +379,13 @@ mod tests {
     fn literal_float() {
         let filename = diag::FileName::new("literal_float");
 
+        #[allow(clippy::approx_constant)]
         let inputs = &[
             ("3.14", 3.14),
             ("-3.14", -3.14),
             ("2.5E10", 2.5E10),
             ("2.5e10", 2.5e10),
             ("2.5E-10", 2.5E-10),
-            ("5.", 5.),
-            (".5", 0.5), // this should be an error
             ("0.5", 0.5),
             ("1.0e+1-1", 10.0),
             ("inf", std::f64::INFINITY),
@@ -370,7 +395,6 @@ mod tests {
 
         for (input, expected) in inputs {
             let input: diag::Text = (*input).into();
-            log::info!("{}", input);
             let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
             let t = Parser::new(filename, &input, &tokens)
                 .expect(&mut LitFloat)
@@ -385,11 +409,15 @@ mod tests {
             }
             assert_eq!(t, hir::Literal::Float(*expected));
         }
+    }
 
-        let bad = &[
-            "_1.1", "1._1", "._1", "1.e1", ".e1", "1.+1", ".+1", "1.1e/1",
-        ];
+    #[test]
+    fn bad_float_literals() {
+        let filename = diag::FileName::new("bad_float_literals");
+        // TODO "1.+1",
+        let bad = &["_1.1", "1._1", "._1", "1.e1", ".e1", ".+1", "1.1e/1"];
         for bad in bad {
+            eprintln!("---> `{}`", bad);
             let input: diag::Text = (*bad).into();
             let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
             Parser::new(filename, &input, &tokens)
@@ -398,4 +426,3 @@ mod tests {
         }
     }
 }
-

@@ -75,42 +75,41 @@ mod tests {
     #[test]
     fn delimited() {
         let filename = diag::FileName::new("delimited");
-
-        let input: diag::Text = "1,".into();
+        let input: diag::Text = "A,".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let mut syntax = Delimited::new(Token::Integer, Sigil::Comma);
+        let mut syntax = Delimited::new(Token::Identifier, Sigil::Comma);
         let mut parser = Parser::new(filename, &input, &tokens);
         assert_eq!(
             parser.parse_until_eof(&mut syntax).unwrap()[0].value,
-            Token::Integer
+            Token::Identifier
         );
     }
 
     #[test]
     fn optional() {
         let filename = diag::FileName::new("delim_optional");
-        let input: diag::Text = "1".into();
+        let input: diag::Text = "A".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let mut syntax = Delimited::optional(Token::Integer, Sigil::Comma);
+        let mut syntax = Delimited::optional(Token::Identifier, Sigil::Comma);
         let mut parser = Parser::new(filename, &input, &tokens);
         assert_eq!(
             parser.parse_until_eof(&mut syntax).unwrap()[0].value,
-            Token::Integer
+            Token::Identifier
         );
     }
 
     #[test]
     fn many() {
         let filename = diag::FileName::new("delim_optional");
-        let input: diag::Text = "1____2_34".into();
+        let input: diag::Text = ".____._..".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let mut syntax = Delimited::many(Token::Integer, Sigil::Underscore);
+        let mut syntax = Delimited::many(Sigil::Dot, Sigil::Underscore);
         let mut parser = Parser::new(filename, &input, &tokens);
         let list = parser.parse_until_eof(&mut syntax).unwrap();
         assert_eq!(list.len(), 4);
-        assert!(list.iter().all(|&k| k.value == Token::Integer));
+        assert!(list.iter().all(|&k| k.value == Sigil::Dot));
     }
 }

@@ -10,5 +10,4 @@ mod syntaxes;
 mod parser;
 pub use self::parser::Parser;
 
-
 pub(crate) use transaction::Transaction;

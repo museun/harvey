@@ -18,6 +18,41 @@ impl<'a> Syntax<'a> for Token {
     }
 }
 
+impl<'a> Syntax<'a> for lexer::Literal {
+    type Output = Spanned<Self, FileName>;
+
+    fn test(&mut self, parser: &Parser<'a>) -> bool {
+        parser.is(self.clone())
+    }
+
+    // TODO actually check the errors
+    fn expect(&mut self, parser: &mut Parser<'a>) -> Result<Self::Output> {
+        if !self.test(parser) {
+            return Err(parser.report_error_next(format!("expected '{}'", self)));
+        }
+        let start = parser.shift();
+        let a = match start.value {
+            Token::BeginLiteral(a) => a,
+            _ => return Err(parser.report_error_next(format!("expected '{}'", self))),
+        };
+
+        if !self.test(parser) {
+            return Err(parser.report_error_next(format!("expected '{}'", self)));
+        }
+        let end = parser.shift();
+        let b = match start.value {
+            Token::BeginLiteral(a) => a,
+            _ => return Err(parser.report_error_next(format!("expected '{}'", self))),
+        };
+
+        if a != b {
+            return Err(parser.report_error_current(format!("expected '{}'", self)));
+        }
+
+        Ok(Spanned::new(a, start.span.extend(end.span)))
+    }
+}
+
 impl<'a> Syntax<'a> for Keyword {
     type Output = Spanned<Self, FileName>;
 
@@ -55,7 +90,6 @@ impl<'a> Syntax<'a> for Sigil {
         Err(parser.report_error_current(format!("expected '{}'", self)))
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -98,9 +132,10 @@ mod tests {
 
         let input: diag::Text = "->".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
-        dbg!(Parser::new(filename, &input, &tokens)
+        // TODO write this test?
+        Parser::new(filename, &input, &tokens)
             .expect(&mut Sigil::Arrow)
-            .unwrap());
+            .unwrap();
     }
 
     #[test]

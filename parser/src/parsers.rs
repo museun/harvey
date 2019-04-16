@@ -21,4 +21,5 @@ use_this! {
     surround;
     tokens;
     or;
+    then;
 }

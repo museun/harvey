@@ -9,6 +9,6 @@ members = [
     "lexer",
     "parser",
     "hir",    
-    # "infer",
-    # "repl",
+    "infer",
+    "repl",
 ]

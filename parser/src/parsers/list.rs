@@ -47,10 +47,10 @@ mod tests {
     fn list() {
         let filename = diag::FileName::new("list");
 
-        let input: diag::Text = "1, 2, 3, 4, 5,6,7,8,9,".into();
+        let input: diag::Text = "A, B, C, D, E,a,b,c,d,".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
-        let mut syntax = List::new(Token::Integer, Sigil::Comma);
+        let mut syntax = List::new(Token::Identifier, Sigil::Comma);
         let res = Parser::new(filename, &input, &tokens)
             .parse_until_eof(&mut syntax)
             .unwrap()
@@ -58,9 +58,9 @@ mod tests {
             .unwrap();
 
         assert_eq!(res.len(), 9);
-        assert!(res.iter().all(|k| k.value == Token::Integer));
+        assert!(res.iter().all(|k| k.value == Token::Identifier));
 
-        let input: diag::Text = "1, 2, 3, 4,\n5,6,7,8,9,".into();
+        let input: diag::Text = "A, B, C, D,\na,b,c,d,e,".into();
         let tokens = Lexer::new(&input, filename).into_iter().collect::<Vec<_>>();
 
         let list = Parser::new(filename, &input, &tokens)
@@ -69,9 +69,9 @@ mod tests {
         assert_eq!(list.len(), 2);
 
         assert_eq!(list[0].len(), 4);
-        assert!(list[0].iter().all(|k| k.value == Token::Integer));
+        assert!(list[0].iter().all(|k| k.value == Token::Identifier));
 
         assert_eq!(list[1].len(), 5);
-        assert!(list[1].iter().all(|k| k.value == Token::Integer));
+        assert!(list[1].iter().all(|k| k.value == Token::Identifier));
     }
 }
